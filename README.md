@@ -26,10 +26,12 @@
 ## 🛠️ Instalace
 
 1. Stáhni soubor `killswitch-manager.sh`
-2. Přidej práva ke spuštění:
+2. Stáhni soubor `install.sh`
+3. Přidej práva ke spuštění:
 
 ```bash
 chmod +x killswitch-manager.sh
+chmod +x install.sh
 ```
 
 ### KILL KEY
