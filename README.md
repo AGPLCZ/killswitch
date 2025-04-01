@@ -9,7 +9,8 @@
 
 
 
-### Zabrání vyskakování potvrzovacích oken a vypne počítač okamžitě) 
+### KILL KEY
+- Zabrání vyskakování potvrzovacích oken a vypne počítač okamžitě) 
 - sudo visudo
 
 #### Vlož
