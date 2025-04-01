@@ -30,7 +30,7 @@
 
 ```bash
 chmod +x killswitch-manager.sh
-
+```
 
 
 # killswitch key - manuálně
