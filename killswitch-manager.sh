@@ -3,25 +3,32 @@
 RULE_DIR="/etc/udev/rules.d"
 SCRIPT_PATH="/root/killswitch.sh"
 LOG_PATH="/root/usbkill.log"
+SHORTCUT_SCRIPT="$HOME/kill.sh"
 
-# Barevné výpisy (volitelně vypnout)
 YELLOW='\033[1;33m'
 GREEN='\033[1;32m'
 RED='\033[1;31m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 function show_menu() {
     echo ""
-    echo -e "${GREEN}USB Killswitch Manager v0.1${NC}"
-    echo "1) Přidat nové zařízení"
+    echo -e "${GREEN}██████╗ ██╗██╗     ██╗     ███████╗███████╗██╗███████╗██╗  ██╗
+██╔══██╗██║██║     ██║     ██╔════╝██╔════╝██║██╔════╝██║ ██╔╝
+██████╔╝██║██║     ██║     █████╗  ███████╗██║█████╗  █████╔╝ 
+██╔═══╝ ██║██║     ██║     ██╔══╝  ╚════██║██║██╔══╝  ██╔═██╗ 
+██║     ██║███████╗███████╗███████╗███████║██║███████╗██║  ██╗
+╚═╝     ╚═╝╚══════╝╚══════╝╚══════╝╚══════╝╚═╝╚══════╝╚═╝  ╚═╝ v0.2${NC}"
+    echo ""
+    echo "1) Přidat nové USB zařízení jako killswitch"
     echo "2) Zobrazit aktivní killswitch zařízení"
-    echo "3) Odstranit zařízení"
-    echo "4) Načíst pravidla znovu"
-    echo "5) Konec"
+    echo "3) Odstranit jedno zařízení"
+    echo "4) Hromadně deaktivovat všechna zařízení"
+    echo "5) Vytvořit killswitch na klávesovou zkratku"
+    echo "6) Znovu načíst pravidla"
+    echo "7) Konec"
     echo ""
     read -p "Vyber akci: " choice
 }
-
 function add_device() {
     echo ""
     echo -e "${YELLOW}Detekce zařízení...${NC}"
@@ -64,7 +71,6 @@ function add_device() {
     echo "Vendor: $vendor, Product: $product"
     echo "Soubor: $rule_file"
 
-    # Vytvoření skriptu (pokud ještě neexistuje)
     if [ ! -f "$SCRIPT_PATH" ]; then
         echo "Vytvářím /root/killswitch.sh..."
         cat <<EOF | sudo tee "$SCRIPT_PATH" > /dev/null
@@ -76,7 +82,6 @@ EOF
         sudo chmod +x "$SCRIPT_PATH"
     fi
 
-    # Udev pravidlo
     echo "Vytvářím pravidlo..."
     cat <<EOF | sudo tee "$rule_file" > /dev/null
 ACTION=="remove", ATTRS{idVendor}=="$vendor", ATTRS{idProduct}=="$product", RUN+="$SCRIPT_PATH"
@@ -85,7 +90,6 @@ EOF
     sudo udevadm control --reload-rules
     echo -e "${GREEN}Pravidlo přidáno a aktivováno.${NC}"
 }
-
 function list_devices() {
     echo ""
     echo -e "${YELLOW}Aktivní killswitch pravidla:${NC}"
@@ -134,15 +138,66 @@ function remove_device() {
     sudo udevadm control --reload-rules
     echo -e "${GREEN}Pravidlo odstraněno.${NC}"
 }
+function bulk_remove_all() {
+    echo ""
+    echo -e "${RED}⚠️  Hromadná deaktivace všech killswitch zařízení${NC}"
+    read -p "Opravdu chceš odstranit VŠECHNA pravidla? [y/N]: " confirm
+    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+        echo "Zrušeno."
+        return
+    fi
 
+    sudo rm -f "$RULE_DIR"/85-killswitch-*.rules
+    sudo udevadm control --reload-rules
+    echo -e "${GREEN}Všechna pravidla byla odstraněna.${NC}"
+
+    if [ -f "$SCRIPT_PATH" ]; then
+        read -p "Chceš také odstranit /root/killswitch.sh? [y/N]: " confirm_script
+        if [[ "$confirm_script" == "y" || "$confirm_script" == "Y" ]]; then
+            sudo rm "$SCRIPT_PATH"
+            echo -e "${GREEN}/root/killswitch.sh byl smazán.${NC}"
+        fi
+    fi
+}
+
+function create_keyboard_shortcut() {
+    echo ""
+    echo -e "${YELLOW}Vytvoření killswitch skriptu pro klávesovou zkratku:${NC}"
+
+    cat <<EOF > "$SHORTCUT_SCRIPT"
+#!/bin/bash
+sudo poweroff -f
+EOF
+
+    chmod +x "$SHORTCUT_SCRIPT"
+
+    username=$(whoami)
+    echo ""
+    echo -e "${GREEN}Soubor uložen jako:${NC} $SHORTCUT_SCRIPT"
+    echo ""
+    echo -e "${YELLOW}Pro správné fungování přidej do sudoers (pomocí: sudo visudo):${NC}"
+    echo "$username ALL = NOPASSWD: /sbin/poweroff"
+    echo ""
+    echo -e "${YELLOW}Nastavení klávesové zkratky v Ubuntu:${NC}"
+    echo "1. Otevři Nastavení → Klávesnice → Vlastní klávesové zkratky"
+    echo "2. Klikni na + (Přidat)"
+    echo "   Název: KillSwitch"
+    echo "   Příkaz: $SHORTCUT_SCRIPT"
+    echo "   Zkratka: např. Ctrl + Enter"
+    echo ""
+}
+
+# === Main loop ===
 while true; do
     show_menu
     case $choice in
         1) add_device ;;
         2) list_devices ;;
         3) remove_device ;;
-        4) sudo udevadm control --reload-rules; echo -e "${GREEN}Pravidla znovu načtena.${NC}" ;;
-        5) echo "Ukončuji..."; exit 0 ;;
+        4) bulk_remove_all ;;
+        5) create_keyboard_shortcut ;;
+        6) sudo udevadm control --reload-rules; echo -e "${GREEN}Pravidla znovu načtena.${NC}" ;;
+        7) echo "Ukončuji..."; exit 0 ;;
         *) echo -e "${RED}Neplatná volba.${NC}" ;;
     esac
 done
