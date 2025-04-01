@@ -1,25 +1,14 @@
 # Killswitch Manager v0.2
 
-**Killswitch Manager** je jednoduchý terminálový nástroj pro Linux (Ubuntu), který umožňuje snadno a rychle:
-
-- vytvořit **USB killswitch** – vypnutí počítače po vytažení konkrétního USB zařízení (např. flashdisk),
-- přidat více zařízení současně (pokročilý režim),
-- přidat **klávesovou zkratku** pro okamžité vypnutí,
-- zobrazit a spravovat aktivní pravidla,
-- odstranit jedno nebo všechna zařízení,
-- funguje i bez grafického rozhraní (čistý Bash skript, žádné závislosti).
-
----
+**Killswitch Manager** je jednoduchý terminálový nástroj pro Linux (Ubuntu).
 
 ## 🧩 Co to umí
-
-- ✅ Přidat zařízení jako killswitch (USB odpojení = shutdown)
-- ✅ Přehled aktivních zařízení
-- ✅ Podpora více zařízení současně
-- ✅ Hromadná deaktivace všech pravidel
-- ✅ Přidání skriptu pro klávesovou zkratku
-- ✅ Barevné přehledné menu (TUI)
-- ✅ Funguje i offline / z Terminálu / z recovery prostředí
+- vytvořit **USB killswitch** – vypnutí počítače po vytažení konkrétního USB zařízení (např. flashdisk)
+- přidat více zařízení současně
+- přidat **klávesovou zkratku** pro okamžité vypnutí
+- zobrazit a spravovat aktivní pravidla
+- odstranit jedno nebo všechna zařízení
+- funguje i bez grafického rozhraní (čistý Bash skript)
 
 ---
 
