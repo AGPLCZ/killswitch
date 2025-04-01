@@ -1,4 +1,4 @@
-# Killswitch Manager v0.2
+# Killswitch Manager
 
 **Killswitch Manager** je jednoduchý terminálový nástroj pro Linux (Ubuntu).
 
