@@ -33,6 +33,8 @@
 chmod +x killswitch-manager.sh
 chmod +x install.sh
 ```
+4. Sputit install.sh
+5. Provést ruční nastavení KILL KEY pro vypínání klávesovou zkratkou
 
 ### KILL KEY
 - nebude třeba zadávat heslo před vypnutím
