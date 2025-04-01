@@ -12,12 +12,8 @@ NC='\033[0m'
 
 function show_menu() {
     echo ""
-    echo -e "${GREEN}██████╗ ██╗██╗     ██╗     ███████╗███████╗██╗███████╗██╗  ██╗
-██╔══██╗██║██║     ██║     ██╔════╝██╔════╝██║██╔════╝██║ ██╔╝
-██████╔╝██║██║     ██║     █████╗  ███████╗██║█████╗  █████╔╝ 
-██╔═══╝ ██║██║     ██║     ██╔══╝  ╚════██║██║██╔══╝  ██╔═██╗ 
-██║     ██║███████╗███████╗███████╗███████║██║███████╗██║  ██╗
-╚═╝     ╚═╝╚══════╝╚══════╝╚══════╝╚══════╝╚═╝╚══════╝╚═╝  ╚═╝ v0.2${NC}"
+    echo -e "${GREEN}═══════════════════════════════════${NC}"
+    echo -e "${GREEN}            KILL-SWITCH            ${NC}"
     echo ""
     echo "1) Přidat nové USB zařízení jako killswitch"
     echo "2) Zobrazit aktivní killswitch zařízení"
@@ -92,6 +88,7 @@ EOF
 }
 function list_devices() {
     echo ""
+    echo -e "${GREEN}═══════════════════════════════════${NC}"
     echo -e "${YELLOW}Aktivní killswitch pravidla:${NC}"
     found=0
     for f in "$RULE_DIR"/85-killswitch-*.rules; do
@@ -201,4 +198,3 @@ while true; do
         *) echo -e "${RED}Neplatná volba.${NC}" ;;
     esac
 done
-
