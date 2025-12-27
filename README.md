@@ -1,6 +1,12 @@
+
+
 # Killswitch Manager
 
 **Killswitch Manager** je bezpečnostní nástroj pro Linux (Ubuntu), který umožňuje okamžité vypnutí počítače na základě USB událostí.
+
+
+
+# Killswitch Manager
 
 Nabízí dvě rozhraní:
 - **GUI (grafické rozhraní)** – pro běžné uživatele
@@ -8,7 +14,8 @@ Nabízí dvě rozhraní:
 
 ---
 
-## Funkce
+
+## 🧩 Funkce
 
 - **USB Killswitch**  
   Automatické vypnutí počítače při *odpojení* konkrétního USB zařízení  
@@ -26,6 +33,42 @@ Nabízí dvě rozhraní:
   Možnost vytvořit skript pro okamžité vypnutí systému pomocí klávesové zkratky
 
 ---
+
+
+## 🛠️ Instalace
+
+1. Stáhni soubor `killswitch-manager.sh`
+2. Stáhni soubor `killswitch-gui.py`
+3. Stáhni soubor `install.sh`
+4. Přidej práva ke spuštění:
+
+```bash
+chmod +x killswitch-manager.sh
+chmod +x illswitch-gui.py
+chmod +x install.sh
+```
+4. Sputit install.sh
+5. Provést ruční nastavení KILL KEY pro vypínání klávesovou zkratkou
+
+### KILL KEY
+- nebude třeba zadávat heslo před vypnutím
+
+```bash
+sudo visudo
+```
+
+#### Vlož
+  ```bash
+username ALL = NOPASSWD: /sbin/poweroff
+username ALL = NOPASSWD: /sbin/shutdown
+```
+
+#### klávesová zkratka
+- Ubuntu ->  nastavení -> klávesnice -> vlastní klávesové zkratky 
+- /home/username/kill.sh
+
+
+
 
 ## Obsah repozitáře
 
