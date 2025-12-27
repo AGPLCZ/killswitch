@@ -58,19 +58,7 @@ Instalátor vše nastaví a vytvoří ikony v menu aplikací.
 
 ## 🔑 KILL KEY
 
-- nebude třeba zadávat heslo před vypnutím
-
-```bash
-sudo visudo
-```
-
-### Vlož
-```bash
-username ALL = NOPASSWD: /sbin/poweroff
-username ALL = NOPASSWD: /sbin/shutdown
-```
-
-### Klávesová zkratka
+### Změna klávesové zkratky
 - Ubuntu → Nastavení → Klávesnice → Vlastní klávesové zkratky
 - Příkaz:
 ```
