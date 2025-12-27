@@ -24,8 +24,9 @@ function show_menu() {
     echo "4) Odstranit jedno zařízení"
     echo "5) Hromadně deaktivovat všechna zařízení"
     echo "6) Vytvořit killswitch na klávesovou zkratku"
-    echo "7) Manuální reload pravidel"
-    echo "8) Konec"
+    echo "7) Odstranit killswitch na klávesovou zkratku"
+    echo "8) Znovu načíst pravidla"
+    echo "9) Konec"
     echo ""
     read -p "Vyber akci: " choice
 }
@@ -232,14 +233,160 @@ function bulk_remove_all() {
 }
 
 function create_keyboard_shortcut() {
+    echo ""
+    echo -e "${YELLOW}Automatické nastavení klávesové zkratky...${NC}"
+
+    # 1. Zjištění reálného uživatele
+    # Zkusíme logname, pokud selže, vezmeme SUDO_USER
+    REAL_USER=$(logname 2>/dev/null || echo $SUDO_USER)
+    
+    if [ -z "$REAL_USER" ]; then
+        echo -e "${RED}Chyba: Nelze detekovat reálného uživatele.${NC}"
+        return
+    fi
+    
+    # Získání domovského adresáře
+    USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
+    SHORTCUT_SCRIPT="$USER_HOME/kill.sh"
+
+    # --- KROK 1: SKRIPT ---
+    # Vytvoření skriptu kill.sh
     cat <<EOF > "$SHORTCUT_SCRIPT"
 #!/bin/bash
-sudo systemctl poweroff -i
+# Vynucené vypnutí bez dotazů
+sudo /bin/systemctl poweroff -i
 EOF
     chmod +x "$SHORTCUT_SCRIPT"
-    username=$(whoami)
-    echo "Uloženo: $SHORTCUT_SCRIPT"
-    echo "Přidej do sudoers: $username ALL = NOPASSWD: /bin/systemctl"
+    chown $REAL_USER:$REAL_USER "$SHORTCUT_SCRIPT"
+    echo -e "${GREEN}1. Skript vytvořen:${NC} $SHORTCUT_SCRIPT"
+
+    # --- KROK 2: SUDOERS (Opraveno pomocí 'tee') ---
+    SUDO_FILE="/etc/sudoers.d/killswitch-$REAL_USER"
+    
+    echo "Nastavuji práva v $SUDO_FILE..."
+    
+    # Zápis pomocí 'tee' (řeší problém Permission denied)
+    echo "$REAL_USER ALL=(ALL) NOPASSWD: /bin/systemctl poweroff -i" | sudo tee "$SUDO_FILE" > /dev/null
+    sudo chmod 0440 "$SUDO_FILE"
+    
+    # Kontrola syntaxe
+    if sudo visudo -c -f "$SUDO_FILE" > /dev/null; then
+        echo -e "${GREEN}2. Práva nastavena (nebude vyžadováno heslo).${NC}"
+    else
+        echo -e "${RED}Chyba při kontrole sudoers. Mažu vadný soubor.${NC}"
+        sudo rm "$SUDO_FILE"
+        return
+    fi
+
+    # --- KROK 3: GNOME ZKRATKA (Oprava DBUS) ---
+    echo "3. Nastavuji systémovou zkratku (Ctrl+Enter)..."
+    
+    # Musíme najít PID procesu uživatele, abychom se napojili na jeho DBUS
+    USER_PID=$(pgrep -u "$REAL_USER" "gnome-session" | head -n 1)
+    if [ -z "$USER_PID" ]; then
+        USER_PID=$(pgrep -u "$REAL_USER" "dbus-daemon" | head -n 1)
+    fi
+    
+    if [ -n "$USER_PID" ]; then
+        # Export DBUS adresy z běžícího procesu
+        export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$USER_PID/environ | tr '\0' '\n' | grep DBUS_SESSION_BUS_ADDRESS | cut -d= -f2-)
+    else
+        echo -e "${RED}Varování: Nelze najít grafickou relaci uživatele (DBUS). Zkratku nelze nastavit automaticky.${NC}"
+        return
+    fi
+
+    KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-killswitch/"
+    
+    # Čtení aktuálního nastavení (pod uživatelem s DBUS adresou)
+    CURRENT_LIST=$(sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)
+    
+    # Pokud seznam neexistuje nebo je prázdný
+    if [[ "$CURRENT_LIST" == "@as []" || "$CURRENT_LIST" == "[]" ]]; then
+        NEW_LIST="['$KEY_PATH']"
+    else
+        # Pokud tam naše cesta není, přidáme ji
+        if [[ "$CURRENT_LIST" != *"$KEY_PATH"* ]]; then
+            NEW_LIST="${CURRENT_LIST%]}, '$KEY_PATH']"
+        else
+            NEW_LIST="$CURRENT_LIST"
+        fi
+    fi
+
+    # Zápis nového seznamu
+    sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$NEW_LIST"
+    
+    # Nastavení konkrétních hodnot zkratky
+    sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH name "Killswitch Panic"
+    
+    sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH command "$SHORTCUT_SCRIPT"
+    
+    sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH binding "<Control>Return"
+
+    echo -e "${GREEN}✅ Hotovo! Nyní můžeš stisknout Ctrl + Enter pro vypnutí PC.${NC}"
+}
+
+
+function remove_keyboard_shortcut() {
+    echo ""
+    echo -e "${YELLOW}Odstraňuji klávesovou zkratku a soubory...${NC}"
+
+    # 1. Zjištění reálného uživatele (stejná logika jako při vytváření)
+    REAL_USER=$(logname 2>/dev/null || echo $SUDO_USER)
+    if [ -z "$REAL_USER" ]; then
+        echo -e "${RED}Chyba: Nelze detekovat reálného uživatele.${NC}"
+        return
+    fi
+    USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
+    SHORTCUT_SCRIPT="$USER_HOME/kill.sh"
+    SUDO_FILE="/etc/sudoers.d/killswitch-$REAL_USER"
+
+    # 2. Mazání souborů
+    if [ -f "$SHORTCUT_SCRIPT" ]; then
+        rm "$SHORTCUT_SCRIPT"
+        echo -e "${GREEN}Smazán skript:${NC} $SHORTCUT_SCRIPT"
+    else
+        echo "Skript $SHORTCUT_SCRIPT nenalezen (již smazán?)"
+    fi
+
+    if [ -f "$SUDO_FILE" ]; then
+        sudo rm "$SUDO_FILE"
+        echo -e "${GREEN}Odebrána práva sudoers:${NC} $SUDO_FILE"
+    else
+        echo "Sudoers soubor nenalezen."
+    fi
+
+    # 3. Mazání zkratky z GNOME (gsettings)
+    echo "Mažu zkratku ze systému..."
+
+    # Získání PID a DBUS (nutné pro přístup k nastavení uživatele)
+    USER_PID=$(pgrep -u "$REAL_USER" "gnome-session" | head -n 1)
+    if [ -z "$USER_PID" ]; then
+        USER_PID=$(pgrep -u "$REAL_USER" "dbus-daemon" | head -n 1)
+    fi
+
+    if [ -n "$USER_PID" ]; then
+        export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$USER_PID/environ | tr '\0' '\n' | grep DBUS_SESSION_BUS_ADDRESS | cut -d= -f2-)
+        
+        KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-killswitch/"
+        
+        # 1. Vymazat konkrétní nastavení kláves
+        sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings reset org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH name
+        sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings reset org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH command
+        sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings reset org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH binding
+        
+        # 2. Odstranit cestu ze seznamu aktivních zkratek
+        CURRENT_LIST=$(sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)
+        
+        # Použijeme sed pro odstranění řetězce ze seznamu. 
+        # Řešíme varianty: na začátku, uprostřed (s čárkou), na konci, nebo jediná položka.
+        NEW_LIST=$(echo "$CURRENT_LIST" | sed "s|, '$KEY_PATH'||" | sed "s|'$KEY_PATH', ||" | sed "s|'$KEY_PATH'||")
+        
+        sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$NEW_LIST"
+        
+        echo -e "${GREEN}✅ Zkratka byla úspěšně odstraněna ze systému.${NC}"
+    else
+        echo -e "${RED}Varování: Nelze se spojit s grafickým prostředím. Zkratku nelze automaticky odebrat (zůstane jako nefunkční).${NC}"
+    fi
 }
 
 # === Main loop ===
@@ -252,8 +399,9 @@ while true; do
         4) remove_device ;;
         5) bulk_remove_all ;;
         6) create_keyboard_shortcut ;;
-        7) sudo udevadm control --reload-rules; echo "Reloaded." ;;
-        8) exit 0 ;;
-        *) echo "Neplatná volba." ;;
+        7) remove_keyboard_shortcut ;;  # <--- Nová volba
+        8) sudo udevadm control --reload-rules; echo -e "${GREEN}Pravidla znovu načtena.${NC}" ;;
+        9) echo "Ukončuji..."; exit 0 ;;
+        *) echo -e "${RED}Neplatná volba.${NC}" ;;
     esac
 done
