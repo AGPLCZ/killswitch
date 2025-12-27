@@ -34,8 +34,6 @@ Nabízí dvě rozhraní:
 
 ---
 
----
-
 ## 🛠️ Instalace
 
 Instalace je plně automatizovaná.
@@ -61,18 +59,6 @@ Instalátor vše nastaví a vytvoří ikony v menu aplikací.
 
 ---
 
-
-## Spuštění bez instalace killswitch-manager.sh
-```bash
-sudo ./killswitch-manager.sh
-```
-
-## Spuštění bez instalace killswitch-gui.py
-```bash
-sudo ./killswitch-gui.py
-```
-
-
 ## KILL KEY
 - nebude třeba zadávat heslo před vypnutím
 
@@ -91,6 +77,7 @@ username ALL = NOPASSWD: /sbin/shutdown
 - /home/username/kill.sh
 
 
+## Spuštění programu
 
 ### Grafické rozhraní (GUI)
 
@@ -101,6 +88,16 @@ username ALL = NOPASSWD: /sbin/shutdown
 Spuštění příkazem:
 ```bash
 sudo killswitch
+```
+
+### Spuštění bez instalace killswitch-manager.sh
+```bash
+sudo ./killswitch-manager.sh
+```
+
+### Spuštění bez instalace killswitch-gui.py
+```bash
+sudo ./killswitch-gui.py
 ```
 
 ---
