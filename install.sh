@@ -1,122 +1,165 @@
 #!/bin/bash
 
-MANAGER_FILE="killswitch-manager.sh"
-INSTALL_PATH="/usr/local/bin/killswitch"
-DESKTOP_FILE="$HOME/.local/share/applications/killswitch.desktop"
-SHORTCUT_SCRIPT="$HOME/kill.sh"
+# --- KONFIGURACE SOUBORŮ ---
+CLI_SOURCE="killswitch-manager.sh"
+GUI_SOURCE="killswitch-gui.py"
+
+# Cílové destinace
+CLI_DEST="/usr/local/bin/killswitch"
+GUI_DIR="/opt/killswitch-gui"
+GUI_DEST="$GUI_DIR/manager.py"
+# Nový pomocný spouštěč pro GUI
+GUI_LAUNCHER="/usr/local/bin/killswitch-gui-start"
+
+# Ikony v menu
+DESKTOP_CLI="/usr/share/applications/killswitch-cli.desktop"
+DESKTOP_GUI="/usr/share/applications/killswitch-gui.desktop"
+
+# Cesty pro odinstalaci
 RULE_DIR="/etc/udev/rules.d"
 ROOT_KILL="/root/killswitch.sh"
 
+# Barvy
 YELLOW='\033[1;33m'
 GREEN='\033[1;32m'
 RED='\033[1;31m'
 NC='\033[0m'
+
+# Kontrola ROOT
+if [ "$EUID" -ne 0 ]; then
+  echo -e "${RED}Spusť tento instalátor jako root (sudo ./install.sh)${NC}"
+  exit 1
+fi
 
 function pause() {
   echo ""
   read -p "Stiskni Enter pro pokračování..."
 }
 
+function check_dependencies() {
+    echo "📦 Kontrola závislostí..."
+    # Kontrola Python Tkinter
+    if ! python3 -c "import tkinter" &> /dev/null; then
+        echo -e "${YELLOW}Doinstalovávám python3-tk...${NC}"
+        apt-get update -qq
+        apt-get install -y python3-tk
+    fi
+    # Kontrola xhost (potřeba pro GUI pod rootem)
+    if ! command -v xhost &> /dev/null; then
+        echo -e "${YELLOW}Doinstalovávám x11-xserver-utils (xhost)...${NC}"
+        apt-get install -y x11-xserver-utils
+    fi
+    echo -e "${GREEN}Závislosti jsou v pořádku.${NC}"
+}
+
 function install_manager() {
   echo ""
-  echo "➡️ Instalace Killswitch Manageru"
+  echo -e "${GREEN}➡️  INSTALACE KILLSWITCH MANAGERU${NC}"
 
-  if [ ! -f "$MANAGER_FILE" ]; then
-      echo -e "${RED}❌ Soubor $MANAGER_FILE nebyl nalezen. Ujisti se, že jsi ve správném adresáři.${NC}"
+  if [ ! -f "$CLI_SOURCE" ] || [ ! -f "$GUI_SOURCE" ]; then
+      echo -e "${RED}❌ Chyba: Nenalezeny zdrojové soubory (killswitch-manager.sh nebo killswitch-gui.py).${NC}"
       pause
       return
   fi
 
-  echo "📁 Kopíruji do $INSTALL_PATH"
-  sudo cp "$MANAGER_FILE" "$INSTALL_PATH"
-  sudo chmod +x "$INSTALL_PATH"
+  check_dependencies
 
+  # 1. Instalace CLI
+  echo "📁 Instaluji CLI..."
+  cp "$CLI_SOURCE" "$CLI_DEST"
+  chmod +x "$CLI_DEST"
+
+  # 2. Instalace GUI Scriptu
+  echo "📁 Instaluji GUI..."
+  mkdir -p "$GUI_DIR"
+  cp "$GUI_SOURCE" "$GUI_DEST"
+  chmod +x "$GUI_DEST"
+
+  # 3. Vytvoření SPOUŠTĚČE (Wrapperu) pro GUI
+  # Toto řeší problém s pádem aplikace - nastaví xhost a cesty
+  echo "⚙️  Vytvářím bezpečný spouštěč..."
+  cat <<EOF > "$GUI_LAUNCHER"
+#!/bin/bash
+# Povolit rootovi přístup k X serveru (obrazovce)
+xhost +si:localuser:root > /dev/null 2>&1
+# Spustit aplikaci s předáním grafického prostředí
+pkexec env DISPLAY=\$DISPLAY XAUTHORITY=\$XAUTHORITY /usr/bin/python3 $GUI_DEST
+EOF
+  chmod +x "$GUI_LAUNCHER"
+
+  # 4. Ikony
   echo ""
-  read -p "Chceš vytvořit ikonu v menu (killswitch.desktop)? [y/N]: " desktop_confirm
+  read -p "Vytvořit ikony v menu? [y/N]: " desktop_confirm
   if [[ "$desktop_confirm" == "y" || "$desktop_confirm" == "Y" ]]; then
-      mkdir -p "$(dirname "$DESKTOP_FILE")"
-      cat <<EOF > "$DESKTOP_FILE"
+      
+      # Ikona terminálu
+      cat <<EOF > "$DESKTOP_CLI"
 [Desktop Entry]
-Name=Killswitch Manager
+Name=Killswitch Console
+Comment=Správa USB ochrany (Terminál)
 Exec=sudo killswitch
 Icon=utilities-terminal
 Terminal=true
 Type=Application
-Categories=Utility;
+Categories=Utility;System;
 EOF
-      chmod +x "$DESKTOP_FILE"
-      echo "🖱️ Ikona byla vytvořena."
+
+      # Ikona GUI - nyní volá náš spouštěč
+      cat <<EOF > "$DESKTOP_GUI"
+[Desktop Entry]
+Name=Killswitch Manager
+Comment=Správa USB ochrany (GUI)
+Exec=$GUI_LAUNCHER
+Icon=security-high
+Terminal=false
+Type=Application
+Categories=Utility;System;Settings;
+EOF
+
+      echo "🖱️  Ikony vytvořeny."
   fi
 
   echo ""
-  echo -e "${GREEN}✅ Instalace dokončena.${NC}"
-  echo ""
-  echo -e "${YELLOW}Spusť správce tímto příkazem:${NC}"
-  echo "   sudo killswitch"
-  echo ""
-  echo "🖱️ Nebo najdeš aplikaci v nabídce pod názvem 'Killswitch Manager'."
-
+  echo -e "${GREEN}✅ Hotovo.${NC}"
+  echo "Nyní můžeš aplikaci spustit z menu."
   pause
 }
 
 function uninstall_manager() {
   echo ""
-  echo "⚠️ Odinstalace Killswitch Manageru"
+  echo -e "${RED}⚠️  ODINSTALACE${NC}"
 
-  if [ -f "$INSTALL_PATH" ]; then
-    sudo rm "$INSTALL_PATH"
-    echo "🗑️ Odebrán $INSTALL_PATH"
-  fi
-
-  if [ -f "$DESKTOP_FILE" ]; then
-    rm "$DESKTOP_FILE"
-    echo "🗑️ Odebrána ikona z menu"
-  fi
-
-  if [ -f "$SHORTCUT_SCRIPT" ]; then
-    read -p "Smazat i klávesovou zkratku ~/kill.sh? [y/N]: " del_shortcut
-    if [[ "$del_shortcut" == "y" || "$del_shortcut" == "Y" ]]; then
-      rm "$SHORTCUT_SCRIPT"
-      echo "🗑️ Smazán $SHORTCUT_SCRIPT"
-    fi
-  fi
-
-  echo ""
-  echo "➡️ Deaktivuji všechna pravidla USB killswitch..."
-  sudo rm -f "$RULE_DIR"/85-killswitch-*.rules
-  echo "🗑️ Smazána všechna pravidla v $RULE_DIR"
-  sudo udevadm control --reload-rules
-
+  rm -f "$CLI_DEST" "$GUI_LAUNCHER"
+  rm -rf "$GUI_DIR"
+  rm -f "$DESKTOP_CLI" "$DESKTOP_GUI"
+  
+  # Smazání pravidel
+  rm -f "$RULE_DIR"/85-killswitch-*.rules
+  udevadm control --reload-rules
+  
   if [ -f "$ROOT_KILL" ]; then
-    read -p "Smazat i /root/killswitch.sh? [y/N]: " del_root
-    if [[ "$del_root" == "y" || "$del_root" == "Y" ]]; then
-      sudo rm "$ROOT_KILL"
-      echo "🗑️ Smazán $ROOT_KILL"
-    fi
+      rm "$ROOT_KILL"
+      echo "🗑️  Smazán vypínací skript."
   fi
 
-  echo ""
-  echo -e "${GREEN}✅ Killswitch Manager a všechna zařízení byly deaktivovány a odstraněny.${NC}"
+  echo -e "${GREEN}✅ Odinstalováno.${NC}"
   pause
 }
-
 
 # === MENU ===
 while true; do
   clear
-  echo -e "${GREEN}Killswitch Manager – Instalátor / Odinstalátor${NC}"
+  echo -e "${GREEN}Killswitch Installer${NC}"
+  echo "1) Instalovat / Opravit instalaci"
+  echo "2) Odinstalovat"
+  echo "3) Konec"
   echo ""
-  echo "1) Instalovat Killswitch Manager"
-  echo "2) Odinstalovat Killswitch Manager"
-  echo "3) Ukončit"
-  echo ""
-  read -p "Zadej volbu: " opt
+  read -p "Volba: " opt
 
   case "$opt" in
     1) install_manager ;;
     2) uninstall_manager ;;
-    3) echo "Ukončuji..."; exit 0 ;;
-    *) echo -e "${RED}Neplatná volba${NC}"; pause ;;
+    3) exit 0 ;;
+    *) echo "Neplatná volba" ;;
   esac
 done
-
