@@ -1,5 +1,17 @@
 # 🛑 Killswitch Manager
 
+[![OS](https://img.shields.io/badge/OS-Ubuntu%20%7C%20Debian-orange?style=flat-square&logo=linux)](https://ubuntu.com/)
+[![Language](https://img.shields.io/badge/Language-English%20%7C%20Czech-blue?style=flat-square)](https://github.com/AGPLCZ/killswitch)
+[![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
+
+> **Killswitch Manager** is a specialized security tool for Linux (Ubuntu/Debian) designed to trigger an immediate system shutdown based on USB events or a global panic shortcut.
+
+
+
+
+
+# 🛑 Killswitch Manager
+
 <div align="center">
 
 [![OS](https://img.shields.io/badge/OS-Ubuntu%20%7C%20Debian-orange?style=for-the-badge&logo=linux)](https://ubuntu.com/)
@@ -52,16 +64,13 @@ Fully localized in **English** and **Czech**, including the installer, CLI, and 
 
 ## 🛠️ Installation
 
-### Option 1: .deb Package (Recommended)
+### Option 1: .deb Package
 
-The most professional way to install is via the pre-built Debian package.
+Create a .deb installation package
 
 ```bash
-# Download the latest release
-wget https://github.com/AGPLCZ/killswitch/releases/download/v1.0/killswitch_1.0_all.deb
-
 # Install the package
-sudo apt install ./killswitch_1.0_all.deb
+sudo ./create.sh
 ```
 
 ### Option 2: Installer Script
@@ -211,23 +220,12 @@ sudo apt remove killswitch
 
 ---
 
-## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
-
----
 
 ## 📝 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-
-## 🙏 Acknowledgments
-
-- Built for the Linux security community
-- Inspired by physical security best practices
-- Special thanks to all contributors and testers
 
 ---
 
