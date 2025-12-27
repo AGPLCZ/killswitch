@@ -59,7 +59,7 @@ function set_language() {
         TXT_KILL_DONE_INFO="Hotovo. Zkus zařízení vytáhnout."
         
         TXT_ACTIVE_RULES="Aktivní killswitch pravidla:"
-        TXT_NO_RULES="❌ Nejsou přidána žádná pravidla."
+        TXT_NO_RULES="Nejsou přidána žádná pravidla."
         TXT_DELETE_RULE="Smazat pravidlo:"
         TXT_DELETED="Smazáno."
         TXT_ALL_DELETED="Vše smazáno."
@@ -72,7 +72,7 @@ function set_language() {
         TXT_ERR_SUDOERS="Chyba při kontrole sudoers. Mažu vadný soubor."
         TXT_SETTING_GNOME="3. Nastavuji systémovou zkratku (Ctrl+Enter)..."
         TXT_ERR_DBUS="Varování: Nelze najít grafickou relaci uživatele (DBUS). Zkratku nelze nastavit automaticky."
-        TXT_DONE_SHORTCUT="✅ Hotovo! Nyní můžeš stisknout Ctrl + Enter pro vypnutí PC."
+        TXT_DONE_SHORTCUT="Hotovo! Nyní můžeš stisknout Ctrl + Enter pro vypnutí PC."
         
         TXT_REMOVING_SHORTCUT="Odstraňuji klávesovou zkratku a soubory..."
         TXT_DELETED_SCRIPT="Smazán skript:"
@@ -80,7 +80,7 @@ function set_language() {
         TXT_REMOVED_SUDOERS="Odebrána práva sudoers:"
         TXT_SUDOERS_NOT_FOUND="Sudoers soubor nenalezen."
         TXT_DELETING_GNOME="Mažu zkratku ze systému..."
-        TXT_SHORTCUT_REMOVED="✅ Zkratka byla úspěšně odstraněna ze systému."
+        TXT_SHORTCUT_REMOVED="Zkratka byla úspěšně odstraněna ze systému."
         TXT_RELOADED="Pravidla znovu načtena."
         TXT_EXITING="Ukončuji..."
     else
@@ -129,7 +129,7 @@ function set_language() {
         TXT_ERR_SUDOERS="Error checking sudoers. Deleting faulty file."
         TXT_SETTING_GNOME="3. Setting system shortcut (Ctrl+Enter)..."
         TXT_ERR_DBUS="Warning: Cannot find user graphical session (DBUS). Cannot set shortcut automatically."
-        TXT_DONE_SHORTCUT="✅ Done! You can now press Ctrl + Enter to shutdown PC."
+        TXT_DONE_SHORTCUT="Done! You can now press Ctrl + Enter to shutdown PC."
         
         TXT_REMOVING_SHORTCUT="Removing keyboard shortcut and files..."
         TXT_DELETED_SCRIPT="Deleted script:"
@@ -137,7 +137,7 @@ function set_language() {
         TXT_REMOVED_SUDOERS="Removed sudoers rights:"
         TXT_SUDOERS_NOT_FOUND="Sudoers file not found."
         TXT_DELETING_GNOME="Deleting shortcut from system..."
-        TXT_SHORTCUT_REMOVED="✅ Shortcut successfully removed from system."
+        TXT_SHORTCUT_REMOVED="Shortcut successfully removed from system."
         TXT_RELOADED="Rules reloaded."
         TXT_EXITING="Exiting..."
     fi
