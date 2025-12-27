@@ -174,28 +174,28 @@ function list_devices() {
     echo -e "${GREEN}═══════════════════════════════════${NC}"
     echo -e "${YELLOW}Aktivní killswitch pravidla:${NC}"
     found=0
+    
+    # Projdeme soubory pravidel
     for f in "$RULE_DIR"/85-killswitch-*.rules; do
-        if [ -f "$f" ]; then
+        if [ -e "$f" ]; then
             name=$(basename "$f")
-            content=$(cat "$f")
             
+            # Hezké formátování výpisu (PAST vs KILL)
             if [[ "$name" == *"trap"* ]]; then
                 echo -e "${RED}[PAST] $name${NC}"
             else
                 echo -e "${GREEN}[KILL] $name${NC}"
             fi
             
-            if [[ "$content" == *"==\"\""* ]] || [[ "$content" == *"==\"/\""* ]]; then
-                echo -e "       ${RED}⚠️  CHYBA: Prázdné ID! Smaž toto pravidlo.${NC}"
-            else
-                echo -e "       -> $content"
-            fi
+            # Nastavíme příznak, že jsme něco našli
             found=1
         fi
     done
 
+    # TOTO JE ČÁST, KTEROU JSI CHTĚL:
+    # Pokud found zůstalo 0, vypíšeme hlášku
     if [ "$found" -eq 0 ]; then
-        echo "Žádná pravidla nenalezena."
+        echo -e "${RED}❌ Nejsou přidána žádná pravidla.${NC}"
     fi
 }
 
