@@ -46,17 +46,6 @@ Fully localized in **English** and **Czech**, including the installer, CLI, and 
 
 ## 🛠️ Installation
 
-### Option 1: .deb Package
-
-Create a .deb installation package
-
-```bash
-# Install the package
-sudo ./create.sh
-```
-
-### Option 2: Installer Script
-
 Fully automated installation with language selection.
 
 ```bash
