@@ -4,7 +4,7 @@
 [![Language](https://img.shields.io/badge/Language-English%20%7C%20Czech-blue?style=flat-square)](https://github.com/AGPLCZ/killswitch)
 [![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
-> **Killswitch Manager** is a specialized security tool for Linux (Ubuntu/Debian) designed to trigger an immediate system shutdown based on USB events or a global panic shortcut.
+**Killswitch Manager** is a specialized security tool for Linux (Ubuntu/Debian) designed to trigger an immediate system shutdown based on USB events or a global panic shortcut.
 
 ---
 
