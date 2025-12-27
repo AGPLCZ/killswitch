@@ -8,7 +8,147 @@ SHORTCUT_SCRIPT="$HOME/kill.sh"
 YELLOW='\033[1;33m'
 GREEN='\033[1;32m'
 RED='\033[1;31m'
+BLUE='\033[0;34m'
 NC='\033[0m'
+
+# ==========================================
+#  LOCALIZATION / JAZYKY
+# ==========================================
+
+# 1. Automatická detekce jazyka systému (pokud obsahuje "cs" nebo "CZ", nastavíme cs, jinak en)
+if [[ "$LANG" == *"cs"* || "$LANG" == *"CZ"* ]]; then
+    CURRENT_LANG="cs"
+else
+    CURRENT_LANG="en"
+fi
+
+# 2. Definice textů (Slovník v Bashi simulujeme funkcí)
+function set_language() {
+    local mode=$1
+    
+    if [ "$mode" == "cs" ]; then
+        # --- CZECH ---
+        TXT_TITLE="            KILL-SWITCH            "
+        TXT_MENU_1="1) Přidat nové USB zařízení jako killswitch (vypnutí při ODPOJENÍ)"
+        TXT_MENU_2="2) Přidat 'PAST' zařízení (vypnutí při ZAPOJENÍ)"
+        TXT_MENU_3="3) Zobrazit aktivní killswitch pravidla"
+        TXT_MENU_4="4) Odstranit jedno zařízení"
+        TXT_MENU_5="5) Hromadně deaktivovat všechna zařízení"
+        TXT_MENU_6="6) Vytvořit killswitch na klávesovou zkratku"
+        TXT_MENU_7="7) Odstranit klávesovou zkratku"
+        TXT_MENU_8="8) Znovu načíst pravidla"
+        TXT_MENU_9="9) Konec"
+        TXT_SELECT_ACTION="Vyber akci: "
+        
+        TXT_CREATING_SCRIPT="Vytvářím /root/killswitch.sh..."
+        TXT_SCANNING="Prohledávám a filtruji zařízení..."
+        TXT_NO_REMOVABLE="Nenalezena žádná VÝMĚNNÁ (removable) USB zařízení."
+        TXT_TRAP_MODE_WARN="REŽIM PAST: PC se vypne při PŘIPOJENÍ vybraného zařízení!"
+        TXT_KILL_MODE_INFO="REŽIM KILLSWITCH: PC se vypne při ODPOJENÍ vybraného zařízení."
+        TXT_ENTER_DEV_NUM="Zadej číslo zařízení: "
+        TXT_INVALID_CHOICE="Neplatná volba."
+        TXT_ERR_ID="Chyba: Nepodařilo se rozpoznat ID zařízení."
+        TXT_FOUND_SN="Nalezeno SN: "
+        TXT_CREATE_KILL_RULE="Vytvářím pravidlo pro odpojení (Ignoruji SN pro maximální spolehlivost)..."
+        TXT_PREVIEW="--- NÁHLED PRAVIDLA ---"
+        TXT_DEV_ID="ID Zařízení: "
+        TXT_FILE="Soubor: "
+        TXT_CONTENT="Obsah:"
+        TXT_RULE_SAVED="Pravidlo uloženo."
+        TXT_TRAP_DONE_WARN="VAROVÁNÍ: PC se vypne, jakmile toto zařízení připojíš."
+        TXT_KILL_DONE_INFO="Hotovo. Zkus zařízení vytáhnout."
+        
+        TXT_ACTIVE_RULES="Aktivní killswitch pravidla:"
+        TXT_NO_RULES="❌ Nejsou přidána žádná pravidla."
+        TXT_DELETE_RULE="Smazat pravidlo:"
+        TXT_DELETED="Smazáno."
+        TXT_ALL_DELETED="Vše smazáno."
+        
+        TXT_AUTO_SHORTCUT="Automatické nastavení klávesové zkratky..."
+        TXT_ERR_USER="Chyba: Nelze detekovat reálného uživatele."
+        TXT_SCRIPT_CREATED="1. Skript vytvořen:"
+        TXT_SETTING_PERMS="Nastavuji práva v"
+        TXT_PERMS_SET="2. Práva nastavena (nebude vyžadováno heslo)."
+        TXT_ERR_SUDOERS="Chyba při kontrole sudoers. Mažu vadný soubor."
+        TXT_SETTING_GNOME="3. Nastavuji systémovou zkratku (Ctrl+Enter)..."
+        TXT_ERR_DBUS="Varování: Nelze najít grafickou relaci uživatele (DBUS). Zkratku nelze nastavit automaticky."
+        TXT_DONE_SHORTCUT="✅ Hotovo! Nyní můžeš stisknout Ctrl + Enter pro vypnutí PC."
+        
+        TXT_REMOVING_SHORTCUT="Odstraňuji klávesovou zkratku a soubory..."
+        TXT_DELETED_SCRIPT="Smazán skript:"
+        TXT_SCRIPT_NOT_FOUND="Skript nenalezen (již smazán?)"
+        TXT_REMOVED_SUDOERS="Odebrána práva sudoers:"
+        TXT_SUDOERS_NOT_FOUND="Sudoers soubor nenalezen."
+        TXT_DELETING_GNOME="Mažu zkratku ze systému..."
+        TXT_SHORTCUT_REMOVED="✅ Zkratka byla úspěšně odstraněna ze systému."
+        TXT_RELOADED="Pravidla znovu načtena."
+        TXT_EXITING="Ukončuji..."
+    else
+        # --- ENGLISH (Default) ---
+        TXT_TITLE="            KILL-SWITCH            "
+        TXT_MENU_1="1) Add new USB device as Killswitch (Shutdown on REMOVAL)"
+        TXT_MENU_2="2) Add 'TRAP' device (Shutdown on INSERTION)"
+        TXT_MENU_3="3) Show active rules"
+        TXT_MENU_4="4) Delete one device rule"
+        TXT_MENU_5="5) Deactivate ALL devices"
+        TXT_MENU_6="6) Create keyboard shortcut (Panic Button)"
+        TXT_MENU_7="7) Remove keyboard shortcut"
+        TXT_MENU_8="8) Reload rules"
+        TXT_MENU_9="9) Exit"
+        TXT_SELECT_ACTION="Select action: "
+        
+        TXT_CREATING_SCRIPT="Creating /root/killswitch.sh..."
+        TXT_SCANNING="Scanning and filtering devices..."
+        TXT_NO_REMOVABLE="No REMOVABLE USB devices found."
+        TXT_TRAP_MODE_WARN="TRAP MODE: PC will shutdown upon INSERTION of selected device!"
+        TXT_KILL_MODE_INFO="KILLSWITCH MODE: PC will shutdown upon REMOVAL of selected device."
+        TXT_ENTER_DEV_NUM="Enter device number: "
+        TXT_INVALID_CHOICE="Invalid choice."
+        TXT_ERR_ID="Error: Could not identify device ID."
+        TXT_FOUND_SN="Found SN: "
+        TXT_CREATE_KILL_RULE="Creating removal rule (Ignoring SN for maximum reliability)..."
+        TXT_PREVIEW="--- RULE PREVIEW ---"
+        TXT_DEV_ID="Device ID: "
+        TXT_FILE="File: "
+        TXT_CONTENT="Content:"
+        TXT_RULE_SAVED="Rule saved."
+        TXT_TRAP_DONE_WARN="WARNING: PC will shutdown as soon as you connect this device."
+        TXT_KILL_DONE_INFO="Done. Try removing the device."
+        
+        TXT_ACTIVE_RULES="Active Killswitch Rules:"
+        TXT_NO_RULES="❌ No rules added."
+        TXT_DELETE_RULE="Delete rule:"
+        TXT_DELETED="Deleted."
+        TXT_ALL_DELETED="All rules deleted."
+        
+        TXT_AUTO_SHORTCUT="Setting up keyboard shortcut automatically..."
+        TXT_ERR_USER="Error: Cannot detect real user."
+        TXT_SCRIPT_CREATED="1. Script created:"
+        TXT_SETTING_PERMS="Setting permissions in"
+        TXT_PERMS_SET="2. Permissions set (password will not be required)."
+        TXT_ERR_SUDOERS="Error checking sudoers. Deleting faulty file."
+        TXT_SETTING_GNOME="3. Setting system shortcut (Ctrl+Enter)..."
+        TXT_ERR_DBUS="Warning: Cannot find user graphical session (DBUS). Cannot set shortcut automatically."
+        TXT_DONE_SHORTCUT="✅ Done! You can now press Ctrl + Enter to shutdown PC."
+        
+        TXT_REMOVING_SHORTCUT="Removing keyboard shortcut and files..."
+        TXT_DELETED_SCRIPT="Deleted script:"
+        TXT_SCRIPT_NOT_FOUND="Script not found (already deleted?)"
+        TXT_REMOVED_SUDOERS="Removed sudoers rights:"
+        TXT_SUDOERS_NOT_FOUND="Sudoers file not found."
+        TXT_DELETING_GNOME="Deleting shortcut from system..."
+        TXT_SHORTCUT_REMOVED="✅ Shortcut successfully removed from system."
+        TXT_RELOADED="Rules reloaded."
+        TXT_EXITING="Exiting..."
+    fi
+}
+
+# Inicializace jazyka
+set_language "$CURRENT_LANG"
+
+# ==========================================
+#  HLAVNÍ KÓD (Logika beze změn)
+# ==========================================
 
 # Pole pro ukládání filtrovaných zařízení
 filtered_devices=()
@@ -16,24 +156,24 @@ filtered_devices=()
 function show_menu() {
     echo ""
     echo -e "${GREEN}═══════════════════════════════════${NC}"
-    echo -e "${GREEN}            KILL-SWITCH            ${NC}"
+    echo -e "${GREEN}$TXT_TITLE${NC}"
     echo ""
-    echo "1) Přidat nové USB zařízení jako killswitch (vypnutí při ODPOJENÍ)"
-    echo "2) Přidat 'PAST' zařízení (vypnutí při ZAPOJENÍ)"
-    echo "3) Zobrazit aktivní killswitch pravidla"
-    echo "4) Odstranit jedno zařízení"
-    echo "5) Hromadně deaktivovat všechna zařízení"
-    echo "6) Vytvořit killswitch na klávesovou zkratku"
-    echo "7) Odstranit killswitch na klávesovou zkratku"
-    echo "8) Znovu načíst pravidla"
-    echo "9) Konec"
+    echo "$TXT_MENU_1"
+    echo "$TXT_MENU_2"
+    echo "$TXT_MENU_3"
+    echo "$TXT_MENU_4"
+    echo "$TXT_MENU_5"
+    echo "$TXT_MENU_6"
+    echo "$TXT_MENU_7"
+    echo "$TXT_MENU_8"
+    echo "$TXT_MENU_9"
     echo ""
-    read -p "Vyber akci: " choice
+    read -p "$TXT_SELECT_ACTION" choice
 }
 
 function create_shutdown_script() {
     if [ ! -f "$SCRIPT_PATH" ]; then
-        echo "Vytvářím /root/killswitch.sh..."
+        echo "$TXT_CREATING_SCRIPT"
     fi
     # --no-block je kritické pro udev
     cat <<EOF | sudo tee "$SCRIPT_PATH" > /dev/null
@@ -47,7 +187,7 @@ EOF
 # Funkce pro načtení a filtraci zařízení (pouze removable)
 function load_and_filter_devices() {
     filtered_devices=()
-    echo -e "${YELLOW}Prohledávám a filtruji zařízení...${NC}"
+    echo -e "${YELLOW}$TXT_SCANNING${NC}"
     
     mapfile -t all_usb < <(lsusb | grep -v "Linux Foundation")
 
@@ -79,15 +219,15 @@ function add_device_logic() {
     load_and_filter_devices
 
     if [ ${#filtered_devices[@]} -eq 0 ]; then
-        echo -e "${RED}Nenalezena žádná VÝMĚNNÁ (removable) USB zařízení.${NC}"
+        echo -e "${RED}$TXT_NO_REMOVABLE${NC}"
         return
     fi
 
     echo ""
     if [ "$mode" == "trap" ]; then
-        echo -e "${RED}REŽIM PAST: PC se vypne při PŘIPOJENÍ vybraného zařízení!${NC}"
+        echo -e "${RED}$TXT_TRAP_MODE_WARN${NC}"
     else
-        echo "REŽIM KILLSWITCH: PC se vypne při ODPOJENÍ vybraného zařízení."
+        echo "$TXT_KILL_MODE_INFO"
     fi
 
     for i in "${!filtered_devices[@]}"; do
@@ -95,11 +235,11 @@ function add_device_logic() {
     done
 
     echo ""
-    read -p "Zadej číslo zařízení: " index_input
+    read -p "$TXT_ENTER_DEV_NUM" index_input
     index=$((index_input - 1))
 
     if ! [[ "$index_input" =~ ^[0-9]+$ ]] || [ "$index" -lt 0 ] || [ "$index" -ge "${#filtered_devices[@]}" ]; then
-        echo -e "${RED}Neplatná volba.${NC}"
+        echo -e "${RED}$TXT_INVALID_CHOICE${NC}"
         return
     fi
 
@@ -110,7 +250,7 @@ function add_device_logic() {
         vid="${BASH_REMATCH[1]}"
         pid="${BASH_REMATCH[2]}"
     else
-        echo -e "${RED}Chyba: Nepodařilo se rozpoznat ID zařízení.${NC}"
+        echo -e "${RED}$TXT_ERR_ID${NC}"
         return
     fi
 
@@ -131,48 +271,42 @@ function add_device_logic() {
     
     if [ "$mode" == "trap" ]; then
         # === PAST (ADD) ===
-        # Zde MŮŽEME použít serial number, protože zařízení je přítomno
         serial_part=""
         if [ ! -z "$real_serial" ]; then
-            echo -e "${GREEN}Nalezeno SN: $real_serial${NC}"
+            echo -e "${GREEN}$TXT_FOUND_SN$real_serial${NC}"
             serial_part=", ATTRS{serial}==\"$real_serial\""
         fi
         rule_content="ACTION==\"add\", SUBSYSTEM==\"usb\", ATTRS{idVendor}==\"$vid\", ATTRS{idProduct}==\"$pid\"$serial_part, RUN+=\"$SCRIPT_PATH\""
     
     else
         # === KILLSWITCH (REMOVE) ===
-        # Zde NEPOUŽIJEME serial number. Je to nespolehlivé při vytržení.
-        # Vracíme se k metodě ENV{PRODUCT}, která je 100% funkční.
-        
-        echo -e "${YELLOW}Vytvářím pravidlo pro odpojení (Ignoruji SN pro maximální spolehlivost)...${NC}"
-        
-        # Formát vid/pid/*
+        echo -e "${YELLOW}$TXT_CREATE_KILL_RULE${NC}"
         rule_content="ACTION==\"remove\", ENV{PRODUCT}==\"$vid/$pid/*\", RUN+=\"$SCRIPT_PATH\""
     fi
 
     echo ""
-    echo -e "${YELLOW}--- NÁHLED PRAVIDLA ---${NC}"
-    echo "ID Zařízení: $vid:$pid"
-    echo "Soubor: $rule_file"
-    echo -e "Obsah:\n${BLUE}$rule_content${NC}"
+    echo -e "${YELLOW}$TXT_PREVIEW${NC}"
+    echo "$TXT_DEV_ID$vid:$pid"
+    echo "$TXT_FILE$rule_file"
+    echo -e "$TXT_CONTENT\n${BLUE}$rule_content${NC}"
     echo -e "${YELLOW}-----------------------${NC}"
     
     echo "$rule_content" | sudo tee "$rule_file" > /dev/null
     
     sudo udevadm control --reload-rules
     echo ""
-    echo -e "${GREEN}Pravidlo uloženo.${NC}"
+    echo -e "${GREEN}$TXT_RULE_SAVED${NC}"
     if [ "$mode" == "trap" ]; then
-         echo -e "${RED}VAROVÁNÍ: PC se vypne, jakmile toto zařízení připojíš.${NC}"
+         echo -e "${RED}$TXT_TRAP_DONE_WARN${NC}"
     else
-         echo -e "${GREEN}Hotovo. Zkus zařízení vytáhnout.${NC}"
+         echo -e "${GREEN}$TXT_KILL_DONE_INFO${NC}"
     fi
 }
 
 function list_devices() {
     echo ""
     echo -e "${GREEN}═══════════════════════════════════${NC}"
-    echo -e "${YELLOW}Aktivní killswitch pravidla:${NC}"
+    echo -e "${YELLOW}$TXT_ACTIVE_RULES${NC}"
     found=0
     
     # Projdeme soubory pravidel
@@ -192,19 +326,17 @@ function list_devices() {
         fi
     done
 
-    # TOTO JE ČÁST, KTEROU JSI CHTĚL:
-    # Pokud found zůstalo 0, vypíšeme hlášku
     if [ "$found" -eq 0 ]; then
-        echo -e "${RED}❌ Nejsou přidána žádná pravidla.${NC}"
+        echo -e "${RED}$TXT_NO_RULES${NC}"
     fi
 }
 
 function remove_device() {
     echo ""
-    echo -e "${YELLOW}Smazat pravidlo:${NC}"
+    echo -e "${YELLOW}$TXT_DELETE_RULE${NC}"
     mapfile -t rules < <(ls "$RULE_DIR" | grep "85-killswitch-")
     if [ ${#rules[@]} -eq 0 ]; then
-        echo -e "${RED}Žádná pravidla.${NC}"
+        echo -e "${RED}$TXT_NO_RULES${NC}"
         return
     fi
 
@@ -213,35 +345,34 @@ function remove_device() {
     done
 
     echo ""
-    read -p "Číslo: " idx
+    read -p "$TXT_ENTER_DEV_NUM" idx
     sel=$((idx - 1))
 
     if ! [[ "$idx" =~ ^[0-9]+$ ]] || [ "$sel" -lt 0 ] || [ "$sel" -ge "${#rules[@]}" ]; then
-        echo "Neplatná volba."
+        echo "$TXT_INVALID_CHOICE"
         return
     fi
 
     sudo rm "$RULE_DIR/${rules[$sel]}"
     sudo udevadm control --reload-rules
-    echo "Smazáno."
+    echo "$TXT_DELETED"
 }
 
 function bulk_remove_all() {
     sudo rm -f "$RULE_DIR"/85-killswitch-*.rules
     sudo udevadm control --reload-rules
-    echo "Vše smazáno."
+    echo "$TXT_ALL_DELETED"
 }
 
 function create_keyboard_shortcut() {
     echo ""
-    echo -e "${YELLOW}Automatické nastavení klávesové zkratky...${NC}"
+    echo -e "${YELLOW}$TXT_AUTO_SHORTCUT${NC}"
 
     # 1. Zjištění reálného uživatele
-    # Zkusíme logname, pokud selže, vezmeme SUDO_USER
     REAL_USER=$(logname 2>/dev/null || echo $SUDO_USER)
     
     if [ -z "$REAL_USER" ]; then
-        echo -e "${RED}Chyba: Nelze detekovat reálného uživatele.${NC}"
+        echo -e "${RED}$TXT_ERR_USER${NC}"
         return
     fi
     
@@ -258,53 +389,48 @@ sudo /bin/systemctl poweroff -i
 EOF
     chmod +x "$SHORTCUT_SCRIPT"
     chown $REAL_USER:$REAL_USER "$SHORTCUT_SCRIPT"
-    echo -e "${GREEN}1. Skript vytvořen:${NC} $SHORTCUT_SCRIPT"
+    echo -e "${GREEN}$TXT_SCRIPT_CREATED${NC} $SHORTCUT_SCRIPT"
 
-    # --- KROK 2: SUDOERS (Opraveno pomocí 'tee') ---
+    # --- KROK 2: SUDOERS ---
     SUDO_FILE="/etc/sudoers.d/killswitch-$REAL_USER"
     
-    echo "Nastavuji práva v $SUDO_FILE..."
+    echo "$TXT_SETTING_PERMS $SUDO_FILE..."
     
-    # Zápis pomocí 'tee' (řeší problém Permission denied)
+    # Zápis pomocí 'tee'
     echo "$REAL_USER ALL=(ALL) NOPASSWD: /bin/systemctl poweroff -i" | sudo tee "$SUDO_FILE" > /dev/null
     sudo chmod 0440 "$SUDO_FILE"
     
     # Kontrola syntaxe
     if sudo visudo -c -f "$SUDO_FILE" > /dev/null; then
-        echo -e "${GREEN}2. Práva nastavena (nebude vyžadováno heslo).${NC}"
+        echo -e "${GREEN}$TXT_PERMS_SET${NC}"
     else
-        echo -e "${RED}Chyba při kontrole sudoers. Mažu vadný soubor.${NC}"
+        echo -e "${RED}$TXT_ERR_SUDOERS${NC}"
         sudo rm "$SUDO_FILE"
         return
     fi
 
-    # --- KROK 3: GNOME ZKRATKA (Oprava DBUS) ---
-    echo "3. Nastavuji systémovou zkratku (Ctrl+Enter)..."
+    # --- KROK 3: GNOME ZKRATKA ---
+    echo "$TXT_SETTING_GNOME"
     
-    # Musíme najít PID procesu uživatele, abychom se napojili na jeho DBUS
     USER_PID=$(pgrep -u "$REAL_USER" "gnome-session" | head -n 1)
     if [ -z "$USER_PID" ]; then
         USER_PID=$(pgrep -u "$REAL_USER" "dbus-daemon" | head -n 1)
     fi
     
     if [ -n "$USER_PID" ]; then
-        # Export DBUS adresy z běžícího procesu
         export DBUS_SESSION_BUS_ADDRESS=$(grep -z DBUS_SESSION_BUS_ADDRESS /proc/$USER_PID/environ | tr '\0' '\n' | grep DBUS_SESSION_BUS_ADDRESS | cut -d= -f2-)
     else
-        echo -e "${RED}Varování: Nelze najít grafickou relaci uživatele (DBUS). Zkratku nelze nastavit automaticky.${NC}"
+        echo -e "${RED}$TXT_ERR_DBUS${NC}"
         return
     fi
 
     KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-killswitch/"
     
-    # Čtení aktuálního nastavení (pod uživatelem s DBUS adresou)
     CURRENT_LIST=$(sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)
     
-    # Pokud seznam neexistuje nebo je prázdný
     if [[ "$CURRENT_LIST" == "@as []" || "$CURRENT_LIST" == "[]" ]]; then
         NEW_LIST="['$KEY_PATH']"
     else
-        # Pokud tam naše cesta není, přidáme ji
         if [[ "$CURRENT_LIST" != *"$KEY_PATH"* ]]; then
             NEW_LIST="${CURRENT_LIST%]}, '$KEY_PATH']"
         else
@@ -312,53 +438,47 @@ EOF
         fi
     fi
 
-    # Zápis nového seznamu
     sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$NEW_LIST"
     
-    # Nastavení konkrétních hodnot zkratky
     sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH name "Killswitch Panic"
     
     sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH command "$SHORTCUT_SCRIPT"
     
     sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings set org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH binding "<Control>Return"
 
-    echo -e "${GREEN}✅ Hotovo! Nyní můžeš stisknout Ctrl + Enter pro vypnutí PC.${NC}"
+    echo -e "${GREEN}$TXT_DONE_SHORTCUT${NC}"
 }
 
 
 function remove_keyboard_shortcut() {
     echo ""
-    echo -e "${YELLOW}Odstraňuji klávesovou zkratku a soubory...${NC}"
+    echo -e "${YELLOW}$TXT_REMOVING_SHORTCUT${NC}"
 
-    # 1. Zjištění reálného uživatele (stejná logika jako při vytváření)
     REAL_USER=$(logname 2>/dev/null || echo $SUDO_USER)
     if [ -z "$REAL_USER" ]; then
-        echo -e "${RED}Chyba: Nelze detekovat reálného uživatele.${NC}"
+        echo -e "${RED}$TXT_ERR_USER${NC}"
         return
     fi
     USER_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6)
     SHORTCUT_SCRIPT="$USER_HOME/kill.sh"
     SUDO_FILE="/etc/sudoers.d/killswitch-$REAL_USER"
 
-    # 2. Mazání souborů
     if [ -f "$SHORTCUT_SCRIPT" ]; then
         rm "$SHORTCUT_SCRIPT"
-        echo -e "${GREEN}Smazán skript:${NC} $SHORTCUT_SCRIPT"
+        echo -e "${GREEN}$TXT_DELETED_SCRIPT${NC} $SHORTCUT_SCRIPT"
     else
-        echo "Skript $SHORTCUT_SCRIPT nenalezen (již smazán?)"
+        echo "$TXT_SCRIPT_NOT_FOUND"
     fi
 
     if [ -f "$SUDO_FILE" ]; then
         sudo rm "$SUDO_FILE"
-        echo -e "${GREEN}Odebrána práva sudoers:${NC} $SUDO_FILE"
+        echo -e "${GREEN}$TXT_REMOVED_SUDOERS${NC} $SUDO_FILE"
     else
-        echo "Sudoers soubor nenalezen."
+        echo "$TXT_SUDOERS_NOT_FOUND"
     fi
 
-    # 3. Mazání zkratky z GNOME (gsettings)
-    echo "Mažu zkratku ze systému..."
+    echo "$TXT_DELETING_GNOME"
 
-    # Získání PID a DBUS (nutné pro přístup k nastavení uživatele)
     USER_PID=$(pgrep -u "$REAL_USER" "gnome-session" | head -n 1)
     if [ -z "$USER_PID" ]; then
         USER_PID=$(pgrep -u "$REAL_USER" "dbus-daemon" | head -n 1)
@@ -369,23 +489,19 @@ function remove_keyboard_shortcut() {
         
         KEY_PATH="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings/custom-killswitch/"
         
-        # 1. Vymazat konkrétní nastavení kláves
         sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings reset org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH name
         sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings reset org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH command
         sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings reset org.gnome.settings-daemon.plugins.media-keys.custom-keybinding:$KEY_PATH binding
         
-        # 2. Odstranit cestu ze seznamu aktivních zkratek
         CURRENT_LIST=$(sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings get org.gnome.settings-daemon.plugins.media-keys custom-keybindings)
         
-        # Použijeme sed pro odstranění řetězce ze seznamu. 
-        # Řešíme varianty: na začátku, uprostřed (s čárkou), na konci, nebo jediná položka.
         NEW_LIST=$(echo "$CURRENT_LIST" | sed "s|, '$KEY_PATH'||" | sed "s|'$KEY_PATH', ||" | sed "s|'$KEY_PATH'||")
         
         sudo -u "$REAL_USER" DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS" gsettings set org.gnome.settings-daemon.plugins.media-keys custom-keybindings "$NEW_LIST"
         
-        echo -e "${GREEN}✅ Zkratka byla úspěšně odstraněna ze systému.${NC}"
+        echo -e "${GREEN}$TXT_SHORTCUT_REMOVED${NC}"
     else
-        echo -e "${RED}Varování: Nelze se spojit s grafickým prostředím. Zkratku nelze automaticky odebrat (zůstane jako nefunkční).${NC}"
+        echo -e "${RED}$TXT_ERR_DBUS${NC}"
     fi
 }
 
@@ -399,9 +515,9 @@ while true; do
         4) remove_device ;;
         5) bulk_remove_all ;;
         6) create_keyboard_shortcut ;;
-        7) remove_keyboard_shortcut ;;  # <--- Nová volba
-        8) sudo udevadm control --reload-rules; echo -e "${GREEN}Pravidla znovu načtena.${NC}" ;;
-        9) echo "Ukončuji..."; exit 0 ;;
-        *) echo -e "${RED}Neplatná volba.${NC}" ;;
+        7) remove_keyboard_shortcut ;;
+        8) sudo udevadm control --reload-rules; echo -e "${GREEN}$TXT_RELOADED${NC}" ;;
+        9) echo "$TXT_EXITING"; exit 0 ;;
+        *) echo -e "${RED}$TXT_INVALID_CHOICE${NC}" ;;
     esac
 done
