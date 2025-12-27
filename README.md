@@ -4,10 +4,6 @@
 
 **Killswitch Manager** je bezpečnostní nástroj pro Linux (Ubuntu), který umožňuje okamžité vypnutí počítače na základě USB událostí.
 
-
-
-# Killswitch Manager
-
 Nabízí dvě rozhraní:
 - **GUI (grafické rozhraní)** – pro běžné uživatele
 - **CLI (terminálové rozhraní)** – pro pokročilé uživatele a servery
