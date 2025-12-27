@@ -47,8 +47,24 @@ chmod +x killswitch-manager.sh
 chmod +x illswitch-gui.py
 chmod +x install.sh
 ```
-4. Sputit install.sh
-5. Provést ruční nastavení KILL KEY pro vypínání klávesovou zkratkou
+
+## Sputit install.sh
+Provést ruční nastavení KILL KEY pro vypínání klávesovou zkratkou
+Spustit
+```bash
+sudo ./install.sh
+```
+
+## Spuštění bez instalace killswitch-manager.sh
+```bash
+sudo ./killswitch-manager.sh
+```
+
+## Spuštění bez instalace killswitch-gui.py
+```bash
+sudo ./killswitch-gui.py
+```
+
 
 ### KILL KEY
 - nebude třeba zadávat heslo před vypnutím
@@ -112,16 +128,9 @@ Instalátor vše nastaví a vytvoří ikony v menu aplikací.
 
 ---
 
-## Použití
-
 ### Grafické rozhraní (GUI)
 
 - V menu aplikací spusť **Killswitch Manager**
-- Aplikace si vyžádá heslo (vyžaduje root práva pro zápis udev pravidel)
-- Připoj USB zařízení, vyber ho ze seznamu
-- Zvol:
-  - **Vytvořit Killswitch** (reakce na odpojení)
-  - **Vytvořit Past** (reakce na připojení)
 
 ### Terminálové rozhraní (CLI)
 
@@ -129,41 +138,6 @@ Spuštění příkazem:
 ```bash
 sudo killswitch
 ```
-
----
-
-## Nastavení klávesové zkratky (volitelné)
-
-Pro vypnutí počítače klávesovou zkratkou (např. `Ctrl + Alt + K`) je nutné
-umožnit vypnutí systému bez zadání hesla.
-
-### 1. Vytvoření spouštěcího skriptu
-
-V GUI nebo CLI zvol možnost **Vytvořit killswitch na klávesovou zkratku**.  
-Tím se vytvoří soubor:
-```
-~/kill.sh
-```
-
-### 2. Povolení vypnutí bez hesla
-
-Otevři konfiguraci sudoers:
-```bash
-sudo visudo
-```
-
-Na konec souboru přidej (nahraď `username` svým uživatelským jménem):
-```bash
-username ALL = NOPASSWD: /bin/systemctl poweroff -i
-```
-
-### 3. Nastavení zkratky v Ubuntu
-
-- Nastavení → Klávesnice → Zobrazit a přizpůsobit zkratky
-- Vlastní zkratky → Přidat novou
-  - Název: `Killswitch`
-  - Příkaz: `/home/username/kill.sh`
-  - Zkratka: dle libosti (např. `Ctrl + F12`)
 
 ---
 
