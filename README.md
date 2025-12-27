@@ -72,6 +72,7 @@ username ALL = NOPASSWD: /sbin/shutdown
 - Ubuntu ->  nastavení -> klávesnice -> vlastní klávesové zkratky 
 - /home/username/kill.sh
 
+---
 
 ## Spuštění programu
 
