@@ -47,7 +47,7 @@ The most professional way to install the manager is via the pre-built Debian pac
 ### Option 2: Installer Script
 The installation is fully automated and supports language selection upon startup.
 
-```bash
+bash
 # Clone the repository
 git clone [https://github.com/AGPLCZ/killswitch.git](https://github.com/AGPLCZ/killswitch.git)
 cd killswitch
@@ -92,6 +92,9 @@ sudo ./install.sh
 (Select Option 2: Uninstall / Odinstalovat)
 
 ⚠️ Disclaimer: This tool triggers a hard shutdown. Ensure you always save your work before activating a Killswitch or Trap rule. EOF
+
+
+
 
 
 # 🛑 Killswitch Manager
