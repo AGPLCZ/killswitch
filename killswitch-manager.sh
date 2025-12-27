@@ -10,6 +10,9 @@ GREEN='\033[1;32m'
 RED='\033[1;31m'
 NC='\033[0m'
 
+# Pole pro ukládání filtrovaných zařízení
+filtered_devices=()
+
 function show_menu() {
     echo ""
     echo -e "${GREEN}═══════════════════════════════════${NC}"
@@ -21,134 +24,148 @@ function show_menu() {
     echo "4) Odstranit jedno zařízení"
     echo "5) Hromadně deaktivovat všechna zařízení"
     echo "6) Vytvořit killswitch na klávesovou zkratku"
-    echo "7) Znovu načíst pravidla"
+    echo "7) Manuální reload pravidel"
     echo "8) Konec"
     echo ""
     read -p "Vyber akci: " choice
 }
 
-function add_device() {
-    echo ""
-    echo -e "${YELLOW}Detekce zařízení...${NC}"
-    devices=$(lsusb | grep -v "Linux Foundation")
-    IFS=$'\n' read -rd '' -a device_array <<<"$devices"
-
-    if [ ${#device_array[@]} -eq 0 ]; then
-        echo -e "${RED}Nenalezena žádná USB zařízení.${NC}"
-        return
-    fi
-
-    echo ""
-    echo "Vyber zařízení, které bude fungovat jako killswitch (odpojení = vypnutí):"
-    for i in "${!device_array[@]}"; do
-        device="${device_array[$i]}"
-        dev_id=$(echo "$device" | awk '{print $4}' | tr -d :)
-        extra=""
-        if [[ "$dev_id" -le 4 ]]; then
-            extra=" ⚠️ pravděpodobně interní zařízení"
-        fi
-        echo "[$((i+1))] $device$extra"
-    done
-
-    echo ""
-    read -p "Zadej číslo zařízení: " index_input
-    index=$((index_input - 1))
-
-    if ! [[ "$index_input" =~ ^[0-9]+$ ]] || [ "$index" -lt 0 ] || [ "$index" -ge "${#device_array[@]}" ]; then
-        echo -e "${RED}Neplatná volba.${NC}"
-        return
-    fi
-
-    selected="${device_array[$index]}"
-    vendor=$(echo "$selected" | awk '{print $6}' | cut -d: -f1)
-    product=$(echo "$selected" | awk '{print $6}' | cut -d: -f2)
-    rule_file="$RULE_DIR/85-killswitch-${vendor}-${product}.rules"
-
-    echo ""
-    echo "Vytvářím pravidlo pro zařízení: $selected"
-    echo "Vendor: $vendor, Product: $product"
-    echo "Soubor: $rule_file"
-
-    # Vytvoření skriptu pro vypnutí, pokud neexistuje
+function create_shutdown_script() {
     if [ ! -f "$SCRIPT_PATH" ]; then
         echo "Vytvářím /root/killswitch.sh..."
-        cat <<EOF | sudo tee "$SCRIPT_PATH" > /dev/null
-#!/bin/sh
-t=\$(date)
-echo "\$t - USB killswitch aktivován" >> "$LOG_PATH"
-shutdown now
-EOF
-        sudo chmod +x "$SCRIPT_PATH"
     fi
-
-    echo "Vytvářím pravidlo (REMOVE action)..."
-    cat <<EOF | sudo tee "$rule_file" > /dev/null
-ACTION=="remove", ATTRS{idVendor}=="$vendor", ATTRS{idProduct}=="$product", RUN+="$SCRIPT_PATH"
+    # --no-block je kritické pro udev
+    cat <<EOF | sudo tee "$SCRIPT_PATH" > /dev/null
+#!/bin/bash
+echo "\$(date) - KILLSWITCH SPUŠTĚN" >> "$LOG_PATH"
+/bin/systemctl poweroff -i --no-block
 EOF
-
-    sudo udevadm control --reload-rules
-    echo -e "${GREEN}Pravidlo přidáno a aktivováno.${NC}"
+    sudo chmod +x "$SCRIPT_PATH"
 }
 
-function add_trap_device() {
-    echo ""
-    echo -e "${YELLOW}Detekce zařízení pro vytvoření PASTI...${NC}"
-    devices=$(lsusb | grep -v "Linux Foundation")
-    IFS=$'\n' read -rd '' -a device_array <<<"$devices"
+# Funkce pro načtení a filtraci zařízení (pouze removable)
+function load_and_filter_devices() {
+    filtered_devices=()
+    echo -e "${YELLOW}Prohledávám a filtruji zařízení...${NC}"
+    
+    mapfile -t all_usb < <(lsusb | grep -v "Linux Foundation")
 
-    if [ ${#device_array[@]} -eq 0 ]; then
-        echo -e "${RED}Nenalezena žádná USB zařízení.${NC}"
+    for line in "${all_usb[@]}"; do
+        bus=$(echo "$line" | awk '{print $2}')
+        dev=$(echo "$line" | awk '{print $4}' | tr -d :)
+        dev_path="/dev/bus/usb/$bus/$dev"
+        sys_path=$(udevadm info -q path -n "$dev_path" 2>/dev/null)
+        
+        is_removable="unknown"
+        if [ -f "/sys$sys_path/removable" ]; then
+             state=$(cat "/sys$sys_path/removable")
+             if [ "$state" == "fixed" ]; then
+                is_removable="fixed"
+             else
+                is_removable="removable"
+             fi
+        fi
+
+        if [ "$is_removable" != "fixed" ]; then
+             filtered_devices+=("$line")
+        fi
+    done
+}
+
+function add_device_logic() {
+    local mode=$1 
+    
+    load_and_filter_devices
+
+    if [ ${#filtered_devices[@]} -eq 0 ]; then
+        echo -e "${RED}Nenalezena žádná VÝMĚNNÁ (removable) USB zařízení.${NC}"
         return
     fi
 
     echo ""
-    echo -e "${RED}POZOR: Vybrané zařízení způsobí vypnutí PC, jakmile bude PŘIPOJENO.${NC}"
-    echo "Vyber vzorové zařízení (PC se vypne, když připojíš toto nebo stejný typ):"
-    for i in "${!device_array[@]}"; do
-        device="${device_array[$i]}"
-        echo "[$((i+1))] $device"
+    if [ "$mode" == "trap" ]; then
+        echo -e "${RED}REŽIM PAST: PC se vypne při PŘIPOJENÍ vybraného zařízení!${NC}"
+    else
+        echo "REŽIM KILLSWITCH: PC se vypne při ODPOJENÍ vybraného zařízení."
+    fi
+
+    for i in "${!filtered_devices[@]}"; do
+        echo "[$((i+1))] ${filtered_devices[$i]}"
     done
 
     echo ""
     read -p "Zadej číslo zařízení: " index_input
     index=$((index_input - 1))
 
-    if ! [[ "$index_input" =~ ^[0-9]+$ ]] || [ "$index" -lt 0 ] || [ "$index" -ge "${#device_array[@]}" ]; then
+    if ! [[ "$index_input" =~ ^[0-9]+$ ]] || [ "$index" -lt 0 ] || [ "$index" -ge "${#filtered_devices[@]}" ]; then
         echo -e "${RED}Neplatná volba.${NC}"
         return
     fi
 
-    selected="${device_array[$index]}"
-    vendor=$(echo "$selected" | awk '{print $6}' | cut -d: -f1)
-    product=$(echo "$selected" | awk '{print $6}' | cut -d: -f2)
-    # Přidáno 'trap' do názvu souboru pro přehlednost
-    rule_file="$RULE_DIR/85-killswitch-trap-${vendor}-${product}.rules"
-
-    echo ""
-    echo "Vytvářím 'trap' pravidlo pro: $selected"
-    echo "Vendor: $vendor, Product: $product"
-
-    # Kontrola existence vypínacího skriptu
-    if [ ! -f "$SCRIPT_PATH" ]; then
-        echo "Vytvářím /root/killswitch.sh..."
-        cat <<EOF | sudo tee "$SCRIPT_PATH" > /dev/null
-#!/bin/sh
-t=\$(date)
-echo "\$t - USB killswitch (TRAP) aktivován" >> "$LOG_PATH"
-shutdown now
-EOF
-        sudo chmod +x "$SCRIPT_PATH"
+    raw_line="${filtered_devices[$index]}"
+    selected_line=$(echo "$raw_line" | sed 's/\x1b\[[0-9;]*m//g')
+    
+    if [[ $selected_line =~ ID\ ([0-9a-fA-F]+):([0-9a-fA-F]+) ]]; then
+        vid="${BASH_REMATCH[1]}"
+        pid="${BASH_REMATCH[2]}"
+    else
+        echo -e "${RED}Chyba: Nepodařilo se rozpoznat ID zařízení.${NC}"
+        return
     fi
 
-    echo "Vytvářím pravidlo (ADD action)..."
-    # Zde je změna: ACTION je "add" místo "remove"
-    cat <<EOF | sudo tee "$rule_file" > /dev/null
-ACTION=="add", ATTRS{idVendor}=="$vendor", ATTRS{idProduct}=="$product", RUN+="$SCRIPT_PATH"
-EOF
+    # Získání správného Serial Number (pouze pro PAST)
+    bus=$(echo "$selected_line" | awk '{print $2}')
+    dev=$(echo "$selected_line" | awk '{print $4}' | tr -d :)
+    dev_path="/dev/bus/usb/$bus/$dev"
+    real_serial=$(udevadm info --query=property --name="$dev_path" | grep "ID_SERIAL_SHORT=" | cut -d'=' -f2)
+    
+    create_shutdown_script
+    
+    rule_name="85-killswitch-${vid}-${pid}.rules"
+    if [ "$mode" == "trap" ]; then
+        rule_name="85-killswitch-trap-${vid}-${pid}.rules"
+    fi
+    rule_file="$RULE_DIR/$rule_name"
+    rule_content=""
+    
+    if [ "$mode" == "trap" ]; then
+        # === PAST (ADD) ===
+        # Zde MŮŽEME použít serial number, protože zařízení je přítomno
+        serial_part=""
+        if [ ! -z "$real_serial" ]; then
+            echo -e "${GREEN}Nalezeno SN: $real_serial${NC}"
+            serial_part=", ATTRS{serial}==\"$real_serial\""
+        fi
+        rule_content="ACTION==\"add\", SUBSYSTEM==\"usb\", ATTRS{idVendor}==\"$vid\", ATTRS{idProduct}==\"$pid\"$serial_part, RUN+=\"$SCRIPT_PATH\""
+    
+    else
+        # === KILLSWITCH (REMOVE) ===
+        # Zde NEPOUŽIJEME serial number. Je to nespolehlivé při vytržení.
+        # Vracíme se k metodě ENV{PRODUCT}, která je 100% funkční.
+        
+        echo -e "${YELLOW}Vytvářím pravidlo pro odpojení (Ignoruji SN pro maximální spolehlivost)...${NC}"
+        
+        # Formát vid/pid/*
+        rule_content="ACTION==\"remove\", ENV{PRODUCT}==\"$vid/$pid/*\", RUN+=\"$SCRIPT_PATH\""
+    fi
 
+    echo ""
+    echo -e "${YELLOW}--- NÁHLED PRAVIDLA ---${NC}"
+    echo "ID Zařízení: $vid:$pid"
+    echo "Soubor: $rule_file"
+    echo -e "Obsah:\n${BLUE}$rule_content${NC}"
+    echo -e "${YELLOW}-----------------------${NC}"
+    
+    echo "$rule_content" | sudo tee "$rule_file" > /dev/null
+    
     sudo udevadm control --reload-rules
-    echo -e "${GREEN}Pravidlo přidáno.${NC}"
-    echo -e "${RED}Varování: Pokud toto zařízení odpojíš a znovu připojíš, PC se vypne!${NC}"
+    echo ""
+    echo -e "${GREEN}Pravidlo uloženo.${NC}"
+    if [ "$mode" == "trap" ]; then
+         echo -e "${RED}VAROVÁNÍ: PC se vypne, jakmile toto zařízení připojíš.${NC}"
+    else
+         echo -e "${GREEN}Hotovo. Zkus zařízení vytáhnout.${NC}"
+    fi
 }
 
 function list_devices() {
@@ -156,128 +173,87 @@ function list_devices() {
     echo -e "${GREEN}═══════════════════════════════════${NC}"
     echo -e "${YELLOW}Aktivní killswitch pravidla:${NC}"
     found=0
-    # Hledá všechny soubory začínající na 85-killswitch-, včetně trap verzí
     for f in "$RULE_DIR"/85-killswitch-*.rules; do
         if [ -f "$f" ]; then
-            vendor=$(grep -oP 'idVendor\)=="\K[^"]+' "$f")
-            product=$(grep -oP 'idProduct\)=="\K[^"]+' "$f")
-            action=$(grep -oP 'ACTION=="\K[^"]+' "$f")
+            name=$(basename "$f")
+            content=$(cat "$f")
             
-            type_info="[ODPOJENÍ]"
-            if [[ "$f" == *"trap"* ]] || [[ "$action" == "add" ]]; then
-                type_info="${RED}[PŘIPOJENÍ]${YELLOW}"
+            if [[ "$name" == *"trap"* ]]; then
+                echo -e "${RED}[PAST] $name${NC}"
+            else
+                echo -e "${GREEN}[KILL] $name${NC}"
             fi
             
-            echo "- $type_info $(basename "$f") ($vendor:$product)"
+            if [[ "$content" == *"==\"\""* ]] || [[ "$content" == *"==\"/\""* ]]; then
+                echo -e "       ${RED}⚠️  CHYBA: Prázdné ID! Smaž toto pravidlo.${NC}"
+            else
+                echo -e "       -> $content"
+            fi
             found=1
         fi
     done
 
     if [ "$found" -eq 0 ]; then
-        echo "Žádná killswitch pravidla nenalezena."
+        echo "Žádná pravidla nenalezena."
     fi
 }
 
 function remove_device() {
     echo ""
-    echo -e "${YELLOW}Odstranit killswitch pravidlo:${NC}"
+    echo -e "${YELLOW}Smazat pravidlo:${NC}"
     mapfile -t rules < <(ls "$RULE_DIR" | grep "85-killswitch-")
     if [ ${#rules[@]} -eq 0 ]; then
-        echo -e "${RED}Nenalezena žádná pravidla.${NC}"
+        echo -e "${RED}Žádná pravidla.${NC}"
         return
     fi
 
     for i in "${!rules[@]}"; do
-        rule="${rules[$i]}"
-        vendor=$(grep -oP 'idVendor\)=="\K[^"]+' "$RULE_DIR/$rule")
-        product=$(grep -oP 'idProduct\)=="\K[^"]+' "$RULE_DIR/$rule")
-        
-        # Detekce typu pro výpis
-        if [[ "$rule" == *"trap"* ]]; then
-             info="${RED}(PAST - připojení)${NC}"
-        else
-             info="(Odpojení)"
-        fi
-        
-        echo "[$((i+1))] $rule ($vendor:$product) $info"
+        echo "[$((i+1))] ${rules[$i]}"
     done
 
     echo ""
-    read -p "Zadej číslo pravidla, které chceš odstranit: " idx
+    read -p "Číslo: " idx
     sel=$((idx - 1))
 
     if ! [[ "$idx" =~ ^[0-9]+$ ]] || [ "$sel" -lt 0 ] || [ "$sel" -ge "${#rules[@]}" ]; then
-        echo -e "${RED}Neplatná volba.${NC}"
+        echo "Neplatná volba."
         return
     fi
 
-    echo "Mažu ${rules[$sel]}..."
     sudo rm "$RULE_DIR/${rules[$sel]}"
     sudo udevadm control --reload-rules
-    echo -e "${GREEN}Pravidlo odstraněno.${NC}"
+    echo "Smazáno."
 }
 
 function bulk_remove_all() {
-    echo ""
-    echo -e "${RED}⚠️  Hromadná deaktivace všech killswitch zařízení${NC}"
-    read -p "Opravdu chceš odstranit VŠECHNA pravidla? [y/N]: " confirm
-    if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
-        echo "Zrušeno."
-        return
-    fi
-
     sudo rm -f "$RULE_DIR"/85-killswitch-*.rules
     sudo udevadm control --reload-rules
-    echo -e "${GREEN}Všechna pravidla byla odstraněna.${NC}"
-
-    if [ -f "$SCRIPT_PATH" ]; then
-        read -p "Chceš také odstranit /root/killswitch.sh? [y/N]: " confirm_script
-        if [[ "$confirm_script" == "y" || "$confirm_script" == "Y" ]]; then
-            sudo rm "$SCRIPT_PATH"
-            echo -e "${GREEN}/root/killswitch.sh byl smazán.${NC}"
-        fi
-    fi
+    echo "Vše smazáno."
 }
 
 function create_keyboard_shortcut() {
-    echo ""
-    echo -e "${YELLOW}Vytvoření killswitch skriptu pro klávesovou zkratku:${NC}"
-
     cat <<EOF > "$SHORTCUT_SCRIPT"
 #!/bin/bash
-sudo poweroff -f
+sudo systemctl poweroff -i
 EOF
-
     chmod +x "$SHORTCUT_SCRIPT"
-
     username=$(whoami)
-    echo ""
-    echo -e "${GREEN}Soubor uložen jako:${NC} $SHORTCUT_SCRIPT"
-    echo ""
-    echo -e "${YELLOW}Pro správné fungování přidej do sudoers (pomocí: sudo visudo):${NC}"
-    echo "$username ALL = NOPASSWD: /sbin/poweroff"
-    echo ""
-    echo -e "${YELLOW}Nastavení klávesové zkratky v Ubuntu:${NC}"
-    echo "1. Otevři Nastavení → Klávesnice → Vlastní klávesové zkratky"
-    echo "2. Klikni na + (Přidat)"
-    echo "   Název: KillSwitch"
-    echo "   Příkaz: $SHORTCUT_SCRIPT"
-    echo "   Zkratka: např. Ctrl + Enter"
-    echo ""
+    echo "Uloženo: $SHORTCUT_SCRIPT"
+    echo "Přidej do sudoers: $username ALL = NOPASSWD: /bin/systemctl"
 }
 
 # === Main loop ===
 while true; do
     show_menu
     case $choice in
-        1) add_device ;;
-        2) add_trap_device ;;
+        1) add_device_logic "kill" ;;
+        2) add_device_logic "trap" ;;
         3) list_devices ;;
         4) remove_device ;;
         5) bulk_remove_all ;;
         6) create_keyboard_shortcut ;;
-        7) sudo udevadm control --reload-rules; echo -e "${GREEN}Pravidla znovu načtena.${NC}" ;;
-        8) echo "Ukončuji..."; exit 0 ;;
-        *) echo -e "${RED}Neplatná volba.${NC}" ;;
+        7) sudo udevadm control --reload-rules; echo "Reloaded." ;;
+        8) exit 0 ;;
+        *) echo "Neplatná volba." ;;
     esac
 done
