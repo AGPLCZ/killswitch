@@ -19,6 +19,8 @@ Killswitch Manager is a powerful security tool for Ubuntu/Debian systems that pr
 - **Emergency Response**: Quick system shutdown via keyboard shortcut
 - **Server Security**: CLI interface for headless server deployments
 
+  ![Killswitch Manager](img.png)
+
 ---
 
 ## ✨ Features
