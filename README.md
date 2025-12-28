@@ -45,6 +45,40 @@ Fully localized in **English** and **Czech**, including the installer, CLI, and 
 - **⌨️ CLI**: Powerful console tool for advanced users and headless servers
 
 ---
+## 🐧 Supported Distributions
+
+Killswitch Manager is primarily designed for systems within the Debian and Ubuntu family. The installation and package building processes are optimized for these environments.
+
+### Verified Distributions
+
+The following distributions have been tested and verified to work correctly:
+
+- **Ubuntu** (and all official flavors: Kubuntu, Xubuntu, Lubuntu, Ubuntu MATE, Ubuntu Budgie)
+- **Linux Mint** (Cinnamon, MATE, XFCE)
+- **Pop!_OS**
+- **Debian GNU/Linux**
+- **Elementary OS**
+- **Zorin OS**
+
+### Technical Requirements
+
+| Component | Requirement | Purpose |
+|-----------|-------------|---------|
+| **Package Manager** | `apt` | Dependency handling and package installation |
+| **Init System** | `systemd` | Power management via `systemctl` commands |
+| **Device Management** | `udev` | Real-time USB event monitoring |
+| **Architecture** | Any (package is `all`) | Architecture-independent design |
+| **GUI Dependencies** | `python3-tk`, `x11-xserver-utils` | Graphical interface support |
+
+### Compatibility Notes
+
+- ✅ Works on both **x86_64** and **ARM** architectures
+- ✅ Compatible with **Wayland** and **X11** display servers
+- ⚠️ Not tested on non-Debian-based distributions (Fedora, Arch, etc.)
+- ⚠️ Requires root privileges for USB monitoring and system shutdown
+
+---
+
 
 ## 🛠️ Installation
 
